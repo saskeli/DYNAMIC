@@ -5,3 +5,9 @@ debug.cpp~
 gap_bv_benchmark.txt
 README.md~
 *~
+
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+hopscotch_map-prefix/
