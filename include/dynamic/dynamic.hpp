@@ -25,6 +25,7 @@
 #include "dynamic/internal/wt_string.hpp"
 #include "dynamic/internal/wm_string.hpp"
 #include "dynamic/internal/fm_index.hpp"
+#include "dynamic/internal/bufferedbv.hpp"
 
 namespace dyn{
 
@@ -51,6 +52,8 @@ typedef gap_bitvector<packed_spsi> gap_bv;
  * dynamic succinct bitvector (about 1.1n bits)
  */
 typedef succinct_bitvector<spsi<packed_bit_vector,8192,16>> suc_bv;
+
+typedef succinct_bitvector<spsi<buffered_packed_bit_vector<8>,8192,16>> b_suc_bv;
 
 /*
  * succinct/compressed dynamic string implemented with wavelet trees.
