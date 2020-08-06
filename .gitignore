@@ -11,3 +11,6 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 hopscotch_map-prefix/
+*.log
+.vscode/
+add_bench

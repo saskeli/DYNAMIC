@@ -53,7 +53,10 @@ add_executable(rle_lz77_v2 rle_lz77_v2.cpp)
 add_executable(h0_lz77 h0_lz77.cpp)
 add_executable(rle_bwt rle_bwt.cpp)
 add_executable(cw-bwt cw-bwt.cpp)
+
 add_executable(benchmark benchmark.cpp)
+add_executable(add_bench add_bench.cpp)
+
 add_executable(wm_string wm_string.cpp)
 
 add_dependencies(debug hopscotch_map)
