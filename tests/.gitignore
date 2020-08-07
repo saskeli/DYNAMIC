@@ -1,0 +1,3 @@
+tests
+tests*_include.cmake
+tests*_tests.cmake

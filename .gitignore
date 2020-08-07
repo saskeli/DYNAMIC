@@ -14,3 +14,16 @@ hopscotch_map-prefix/
 *.log
 .vscode/
 add_bench
+
+CTestTestfile.cmake
+DartConfiguration.tcl
+_deps/
+benchmark
+cw-bwt
+h0_lz77
+rle_bwt
+rle_lz77_v1
+rle_lz77_v2
+wm_string
+Testing/
+

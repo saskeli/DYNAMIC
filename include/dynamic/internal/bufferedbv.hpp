@@ -18,42 +18,37 @@ namespace dyn {
 template <uint8_t buffer_size>
 class buffered_packed_bit_vector {
    public:
-    static uint64_t fast_mod(uint64_t const num) { return num & 63; }
-
-    static uint64_t fast_div(uint64_t const num) { return num >> 6; }
-
-    static uint64_t fast_mul(uint64_t const num) { return num << 6; }
-
     explicit buffered_packed_bit_vector(uint64_t const size = 0) {
-        assert(buffer_size >= 1 && buffer_size <= 64);
-        std::fill(buffer, buffer + buffer_size, 0);
-        buffer_count = 0;
+        assert(buffer_size >= 0 && buffer_size < 64);
+
+        if constexpr (buffer_size != 0) {
+            std::fill(buffer, buffer + buffer_size + 1, 0);
+        }
         this->size_ = size;
         this->psum_ = 0;
 
         words = std::vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
-        assert(size_ / int_per_word_ <= words.size());
-        assert((size_ / int_per_word_ == words.size() ||
-                !(words[size_ / int_per_word_] >>
-                  ((size_ % int_per_word_) * width_))) &&
+        assert(size_ >> 6 <= words.size());
+        assert((size_ >> 6 == words.size() ||
+                !(words[size_ >> 6] >> (size_ & 63))) &&
                "uninitialized non-zero values in the end of the vector");
     }
 
     explicit buffered_packed_bit_vector(std::vector<uint64_t>&& _words,
-                                    uint64_t const new_size) {
-        assert(buffer_size > 1 && buffer_size <= 64);
+                                        uint64_t const new_size) {
+        assert(buffer_size >= 0 && buffer_size < 64);
 
-        std::fill(buffer, buffer + buffer_size, 0);
-        buffer_count = 0;
+        if constexpr (buffer_size != 0) {
+            std::fill(buffer, buffer + buffer_size + 1, 0);
+        }
 
         this->words = std::move(_words);
         this->size_ = new_size;
         this->psum_ = psum(size_ - 1);
 
-        assert(size_ / int_per_word_ <= words.size());
-        assert((size_ / int_per_word_ == words.size() ||
-                !(words[size_ / int_per_word_] >>
-                  ((size_ % int_per_word_) * width_))) &&
+        assert(size_ >> 6 <= words.size());
+        assert((size_ >> 6 == words.size() ||
+                !(words[size_ >> 6] >> (size_ & 63))) &&
                "uninitialized non-zero values in the end of the vector");
     }
 
@@ -61,10 +56,12 @@ class buffered_packed_bit_vector {
 
     void print() const {
         std::cout << "Leaf: " << size_ << " elems and " << psum_ << " ones";
-        for (size_t i = 0; i < buffer_count; i++) {
-            std::cout << "\n " << buffer_index(buffer[i]) << ", "
-                      << buffer_is_insertion(buffer[i]) << ", "
-                      << buffer_value(buffer[i]);
+        if constexpr (buffer_size != 0) {
+            for (size_t i = 0; i < buffer_count; i++) {
+                std::cout << "\n " << buffer_index(buffer[i]) << ", "
+                          << buffer_is_insertion(buffer[i]) << ", "
+                          << buffer_value(buffer[i]);
+            }
         }
         for (auto w : words) {
             std::cout << "\n ";
@@ -79,17 +76,19 @@ class buffered_packed_bit_vector {
         assert(i < size());
 
         uint64_t index = i;
-        for (uint8_t idx = 0; idx < buffer_count; idx++) {
-            uint64_t b = buffer_index(buffer[idx]);
-            if (b == i) {
-                if (buffer_is_insertion(buffer[idx])) {
-                    return buffer_value(buffer[idx]);
+        if constexpr (buffer_size != 0) {
+            for (uint8_t idx = 0; idx < buffer_count; idx++) {
+                uint64_t b = buffer_index(buffer[idx]);
+                if (b == i) {
+                    if (buffer_is_insertion(buffer[idx])) {
+                        return buffer_value(buffer[idx]);
+                    }
+                    index++;
+                } else if (b < i) {
+                    index += buffer_is_insertion(buffer[idx]) ? -1 : 1;
+                } else {
+                    break;
                 }
-                index++;
-            } else if (b < i) {
-                index += buffer_is_insertion(buffer[idx]) ? -1 : 1;
-            } else {
-                break;
             }
         }
         return MASK & (words[fast_div(index)] >> fast_mod(index));
@@ -100,9 +99,9 @@ class buffered_packed_bit_vector {
     /*
      * inclusive partial sum (i.e. up to element i included)
      */
-    uint64_t psum(uint64_t i) const { 
+    uint64_t psum(uint64_t i) const {
         assert(i < size_);
-        return rank(i + 1); 
+        return rank(i + 1);
     }
 
     /*
@@ -122,24 +121,26 @@ class buffered_packed_bit_vector {
         for (uint64_t j = 0; j < words.size(); ++j) {
             pop += __builtin_popcountll(words[j]);
             pos += 64;
-            for (uint8_t b = current_buffer; b < buffer_count; b++) {
-                uint32_t b_index = buffer_index(buffer[b]);
-                if (b_index < pos) {
-                    if (buffer_is_insertion(buffer[b])) {
-                        pop += buffer_value(buffer[b]);
-                        pos++;
-                        a_pos_offset--;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count; b++) {
+                    uint32_t b_index = buffer_index(buffer[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer[b])) {
+                            pop += buffer_value(buffer[b]);
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -= (words[fast_div(b_index + a_pos_offset)] &
+                                    (MASK << fast_mod(b_index + a_pos_offset)))
+                                       ? 1
+                                       : 0;
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        current_buffer++;
                     } else {
-                        pop -= (words[fast_div(b_index + a_pos_offset)] &
-                                (MASK << fast_mod(b_index + a_pos_offset)))
-                                   ? 1
-                                   : 0;
-                        pos--;
-                        a_pos_offset++;
+                        break;
                     }
-                    current_buffer++;
-                } else {
-                    break;
                 }
             }
             if (pop >= x) break;
@@ -159,9 +160,7 @@ class buffered_packed_bit_vector {
      * i (included) is == x
      */
     uint64_t search_0(uint64_t x) const {
-        // TODO: TESTS
         assert(size_ > 0);
-        assert(width_ == 1);
         assert(x <= size_ - psum_);
 
         uint64_t s = 0;
@@ -175,24 +174,26 @@ class buffered_packed_bit_vector {
             pop = 64 - __builtin_popcountll(words[j]);
             pos += 64;
             s += pop;
-            for (uint8_t b = current_buffer; b < buffer_count; b++) {
-                uint32_t b_index = buffer_index(buffer[b]);
-                if (b_index < pos) {
-                    if (buffer_is_insertion(buffer[b])) {
-                        pop += buffer_value(buffer[b]) ? 0 : 1;
-                        pos++;
-                        a_pos_offset--;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count; b++) {
+                    uint32_t b_index = buffer_index(buffer[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer[b])) {
+                            pop += buffer_value(buffer[b]) ? 0 : 1;
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -= (words[fast_div(b_index + a_pos_offset)] &
+                                    (MASK << fast_mod(b_index + a_pos_offset)))
+                                       ? 0
+                                       : 1;
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        current_buffer++;
                     } else {
-                        pop -= (words[fast_div(b_index + a_pos_offset)] &
-                                (MASK << fast_mod(b_index + a_pos_offset)))
-                                   ? 0
-                                   : 1;
-                        pos--;
-                        a_pos_offset++;
+                        break;
                     }
-                    current_buffer++;
-                } else {
-                    break;
                 }
             }
             if (pop >= x) break;
@@ -210,29 +211,49 @@ class buffered_packed_bit_vector {
      * smallest index j such that psum(j)+j>=x
      */
     uint64_t search_r(uint64_t x) const {
-        // FIXME: Make buffered
         assert(size_ > 0);
         assert(x <= psum_ + size_);
 
         uint64_t s = 0;
         uint64_t pop = 0;
         uint64_t pos = 0;
+        uint8_t current_buffer = 0;
+        int8_t a_pos_offset = 0;
 
         auto div = fast_div(size_);
         for (uint64_t j = 0; j < div && s < x; ++j) {
             pop = uint64_t(64) + __builtin_popcountll(words[j]);
             pos += 64;
             s += pop;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count; b++) {
+                    uint32_t b_index = buffer_index(buffer[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer[b])) {
+                            pop += buffer_value(buffer[b]) ? 1 : 2;
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -= (words[fast_div(b_index + a_pos_offset)] &
+                                    (MASK << fast_mod(b_index + a_pos_offset)))
+                                       ? 1
+                                       : 2;
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        current_buffer++;
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
 
-        pos -= fast_mul(pos > 0);
-        s -= pop;
+        pos = size_ < pos ? size_ : pos;
 
-        for (; pos < size_ && s < x; ++pos) {
-            s += (uint64_t(1) + at(pos));
+        while (pop >= x) {
+            pop -= at(--pos) ? 1 : 2;
         }
-
-        pos -= pos != 0;
         return pos;
     }
 
@@ -241,15 +262,7 @@ class buffered_packed_bit_vector {
      */
     bool contains(uint64_t x) const {
         assert(size_ > 0);
-        assert(x <= psum_);
-
-        uint64_t s = 0;
-
-        for (uint64_t j = 0; j < size_ && s < x; ++j) {
-            s += at(j);
-        }
-
-        return s == x;
+        return x <= psum_;
     }
 
     /*
@@ -257,15 +270,7 @@ class buffered_packed_bit_vector {
      */
     bool contains_r(uint64_t x) const {
         assert(size_ > 0);
-        assert(x <= psum_ + size_);
-
-        uint64_t s = 0;
-
-        for (uint64_t j = 0; j < size_ && s < x; ++j) {
-            s += (at(j) + uint64_t(1));
-        }
-
-        return s == x;
+        return x <= psum_ + size_;
     }
 
     void increment(uint64_t i, bool delta, bool subtract = false) {
@@ -290,28 +295,43 @@ class buffered_packed_bit_vector {
         auto x = this->at(i);
         psum_ -= x;
         --size_;
-        bool done = false;
-        for (uint8_t idx = 0; idx < buffer_count; idx++) {
-            uint32_t b = buffer_index(buffer[idx]);
-            if (b == i && buffer_is_insertion(buffer[idx]) && !done) {
-                delete_buffer_element(idx--);
-                done = true;
-                continue;
-            }
-            if (b > i) {
-                if (!done) {
-                    insert_buffer(idx, create_buffer(i, 0, x));
+        if constexpr (buffer_size != 0) {
+            bool done = false;
+            for (uint8_t idx = 0; idx < buffer_count; idx++) {
+                uint32_t b = buffer_index(buffer[idx]);
+                if (b == i && buffer_is_insertion(buffer[idx]) && !done) {
+                    delete_buffer_element(idx--);
                     done = true;
-                } else {
-                    set_buffer_index(b - 1, idx);
+                    continue;
+                }
+                if (b > i) {
+                    if (!done) {
+                        insert_buffer(idx, create_buffer(i, 0, x));
+                        done = true;
+                    } else {
+                        set_buffer_index(b - 1, idx);
+                    }
                 }
             }
+            if (!done) {
+                buffer[buffer_count] = create_buffer(i, 0, x);
+                buffer_count++;
+            }
+            if (buffer_count > buffer_size) commit();
+        } else {
+            auto target_word = fast_div(i);
+            auto target_offset = fast_mod(i);
+            words[target_word] =
+                (words[target_word] & ((MASK << target_offset) - 1)) |
+                ((words[target_offset] >> 1) & ~((MASK << target_offset) - 1));
+            words[target_word] |= target_word + 1 < words.size()
+                                      ? (words[target_word + 1] << 63)
+                                      : uint64_t(0);
+            for (size_t i = target_word + 1; i > words.size() - 1; i--) {
+                words[i] = (words[i] >> 1) | (words[i + 1] << 63);
+            }
+            words[words.size() - 1] >>= 1;
         }
-        if (!done) {
-            buffer[buffer_count] = create_buffer(i, 0, x);
-            buffer_count++;
-        }
-        if (buffer_count == buffer_size) commit();
     }
 
     void insert(uint64_t i, uint64_t x) {
@@ -320,43 +340,62 @@ class buffered_packed_bit_vector {
             return;
         }
         psum_ += x ? 1 : 0;
-        bool done = false;
-        int a_pos = 0;
-        for (uint8_t idx = 0; idx < buffer_count; idx++) {
-            uint32_t b = buffer_index(buffer[idx]);
-            if (b < i) {
-                a_pos += buffer_is_insertion(buffer[idx]) ? -1 : 1;
-            // If this buffered remove can be used to turn the insert into a set operation:
-            } else if (b == i && !done && !buffer_is_insertion(buffer[idx]) &&
-                       buffer_value(buffer[idx]) ==
-                           ((words[fast_div(b + a_pos)] &
-                             (MASK << fast_mod(b + a_pos)))
-                                ? true
-                                : false)) {
-                delete_buffer_element(idx--);
-                done = true;
-                a_pos += b;
-                const auto word_nr = fast_div(a_pos);
-                const auto pos = fast_mod(a_pos);
-                words[word_nr] ^=
-                    (words[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)
-                        ? (MASK << pos)
-                        : 0;
-            } else {
-                if (!done) {
-                    insert_buffer(idx, create_buffer(i, 1, x));
+        if constexpr (buffer_size != 0) {
+            bool done = false;
+            int a_pos = 0;
+            for (uint8_t idx = 0; idx < buffer_count; idx++) {
+                uint32_t b = buffer_index(buffer[idx]);
+                if (b < i) {
+                    a_pos += buffer_is_insertion(buffer[idx]) ? -1 : 1;
+                    // If this buffered remove can be used to turn the insert
+                    // into a set operation:
+                } else if (b == i && !done &&
+                           !buffer_is_insertion(buffer[idx]) &&
+                           buffer_value(buffer[idx]) ==
+                               ((words[fast_div(b + a_pos)] &
+                                 (MASK << fast_mod(b + a_pos)))
+                                    ? true
+                                    : false)) {
+                    delete_buffer_element(idx--);
                     done = true;
+                    a_pos += b;
+                    const auto word_nr = fast_div(a_pos);
+                    const auto pos = fast_mod(a_pos);
+                    words[word_nr] ^=
+                        (words[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)
+                            ? (MASK << pos)
+                            : 0;
                 } else {
-                    set_buffer_index(b + 1, idx);
+                    if (!done) {
+                        insert_buffer(idx, create_buffer(i, 1, x));
+                        done = true;
+                    } else {
+                        set_buffer_index(b + 1, idx);
+                    }
                 }
             }
+            size_++;
+            if (!done) {
+                buffer[buffer_count] = create_buffer(i, 1, x);
+                buffer_count++;
+            }
+            if (buffer_count == buffer_size) commit();
+        } else {
+            if (size_ > fast_mul(words.size())) {
+                words.reserve(words.size() + extra_);
+                words.resize(words.size() + extra_, 0);
+            }
+            auto target_word = fast_div(i);
+            auto target_offset = fast_mod(i);
+            for (size_t i = words.size() - 1; i > target_word; i--) {
+                words[i] = (words[i] << 1) | (words[i - 1] >> 63);
+            }
+            words[target_word] =
+                (words[target_word] & ((MASK << target_offset) - 1)) |
+                (words[target_word] << 1) &
+                    ~((MASK << (target_offset + 1) - 1));
+            words[target_word] |= x ? MASK << target_offset : uint64_t(0);
         }
-        size_++;
-        if (!done) {
-            buffer[buffer_count] = create_buffer(i, 1, x);
-            buffer_count++;
-        }
-        if (buffer_count == buffer_size) commit();
     }
 
     /*
@@ -366,11 +405,12 @@ class buffered_packed_bit_vector {
      */
     void push_back(uint64_t x) {
         auto pb_size = size_;
-        for (uint8_t i = 0; i < buffer_count; i++) {
-            pb_size += buffer_is_insertion(buffer[i]) ? -1 : 1;
+        if constexpr (buffer_size != 0) {
+            for (uint8_t i = 0; i < buffer_count; i++) {
+                pb_size += buffer_is_insertion(buffer[i]) ? -1 : 1;
+            }
+            size_++;
         }
-        size_++;
-        assert(int_per_word_ == 64);
         assert(pb_size <= words.size() * 64);
 
         // not enough space for the new element:
@@ -394,8 +434,10 @@ class buffered_packed_bit_vector {
      * new returned block
      */
     buffered_packed_bit_vector* split() {
-        if (buffer_count > 0) {
-            commit();
+        if constexpr (buffer_size != 0) {
+            if (buffer_count > 0) {
+                commit();
+            }
         }
 
         uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
@@ -425,13 +467,12 @@ class buffered_packed_bit_vector {
         size_ = nr_left_ints;
         psum_ = psum(size_ - 1);
 
-        auto right =
-            new buffered_packed_bit_vector(std::move(right_words), nr_right_ints);
+        auto right = new buffered_packed_bit_vector(std::move(right_words),
+                                                    nr_right_ints);
 
-        assert(size_ / int_per_word_ <= words.size());
-        assert((size_ / int_per_word_ == words.size() ||
-                !(words[size_ / int_per_word_] >>
-                  ((size_ % int_per_word_) * width_))) &&
+        assert(size_ >> 6 <= words.size());
+        assert((size_ >> 6 == words.size() ||
+                !(words[size_ >> 6] >> (size_ & 63))) &&
                "uninitialized non-zero values in the end of the vector");
 
         return right;
@@ -440,21 +481,23 @@ class buffered_packed_bit_vector {
     /* set i-th element to x. updates psum */
     void set(const uint64_t i, const bool x) {
         uint64_t idx = i;
-        for (uint8_t j = 0; j < buffer_count; j++) {
-            uint32_t b = buffer_index(buffer[j]);
-            if (b < i) {
-                idx += buffer_is_insertion(buffer[j]) ? -1 : 1;
-            } else if (b == i) {
-                if (buffer_is_insertion(buffer[j])) {
-                    if (buffer_value(buffer[j]) != x) {
-                        psum_ += x ? 1 : -1;
-                        buffer[j] ^= VALUE_MASK;
+        if constexpr (buffer_size != 0) {
+            for (uint8_t j = 0; j < buffer_count; j++) {
+                uint32_t b = buffer_index(buffer[j]);
+                if (b < i) {
+                    idx += buffer_is_insertion(buffer[j]) ? -1 : 1;
+                } else if (b == i) {
+                    if (buffer_is_insertion(buffer[j])) {
+                        if (buffer_value(buffer[j]) != x) {
+                            psum_ += x ? 1 : -1;
+                            buffer[j] ^= VALUE_MASK;
+                        }
+                        return;
                     }
-                    return;
+                    idx++;
+                } else {
+                    break;
                 }
-                idx++;
-            } else {
-                break;
             }
         }
         const auto word_nr = fast_div(idx);
@@ -476,23 +519,23 @@ class buffered_packed_bit_vector {
                8;
     }
 
-    uint64_t width() const { return width_; }
+    uint64_t width() const { return 1; }
 
     void insert_word(uint64_t i, uint64_t word, uint8_t width, uint8_t n) {
-        // TODO: Test?
         assert(false && "No proper implementation");
         assert(i <= size());
         assert(n);
         assert(n * width <= sizeof(word) * 8);
         assert(width * n == 64 || (word >> width * n) == 0);
-
-        if (buffer_count > 0) commit();
+        if constexpr (buffer_size != 0) {
+            if (buffer_count > 0) commit();
+        }
 
         if (n == 1) {
             // only one integer to insert
             insert(i, word);
 
-        } else if (width == 1 && width_ == 1 && n == 64) {
+        } else if (width == 1 && n == 64) {
             // insert 64 bits packed into a word
             uint64_t pos = size_ / 64;
             uint8_t offset = size_ - pos * 64;
@@ -527,14 +570,16 @@ class buffered_packed_bit_vector {
         uint64_t count = 0;
 
         uint64_t idx = n;
-        for (uint8_t i = 0; i < buffer_count; i++) {
-            if (buffer_index(buffer[i]) >= n) break;
-            if (buffer_is_insertion(buffer[i])) {
-                idx--;
-                count += buffer_value(buffer[i]);
-            } else {
-                idx++;
-                count -= buffer_value(buffer[i]);
+        if constexpr (buffer_size != 0) {
+            for (uint8_t i = 0; i < buffer_count; i++) {
+                if (buffer_index(buffer[i]) >= n) break;
+                if (buffer_is_insertion(buffer[i])) {
+                    idx--;
+                    count += buffer_value(buffer[i]);
+                } else {
+                    idx++;
+                    count -= buffer_value(buffer[i]);
+                }
             }
         }
 
@@ -551,6 +596,12 @@ class buffered_packed_bit_vector {
     uint64_t select(uint64_t n) { return search(n + 1); }
 
    private:
+    static uint64_t fast_mod(uint64_t const num) { return num & 63; }
+
+    static uint64_t fast_div(uint64_t const num) { return num >> 6; }
+
+    static uint64_t fast_mul(uint64_t const num) { return num << 6; }
+
     bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
 
     bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
@@ -584,18 +635,20 @@ class buffered_packed_bit_vector {
 
     void set_without_psum_update(uint64_t i, uint64_t x) {
         uint64_t idx = i;
-        for (uint8_t j = 0; j < buffer_count; j++) {
-            uint32_t b = buffer_index(buffer[j]);
-            if (b < i) {
-                idx += buffer_is_insertion(buffer[j]) ? -1 : 1;
-            } else if (b == i) {
-                if (buffer_is_insertion(buffer[j])) {
-                    if (buffer_value(buffer[j]) != x) {
-                        buffer[j] ^= VALUE_MASK;
+        if constexpr (buffer_size != 0) {
+            for (uint8_t j = 0; j < buffer_count; j++) {
+                uint32_t b = buffer_index(buffer[j]);
+                if (b < i) {
+                    idx += buffer_is_insertion(buffer[j]) ? -1 : 1;
+                } else if (b == i) {
+                    if (buffer_is_insertion(buffer[j])) {
+                        if (buffer_value(buffer[j]) != x) {
+                            buffer[j] ^= VALUE_MASK;
+                        }
+                        return;
                     }
-                    return;
+                    idx++;
                 }
-                idx++;
             }
         }
         const auto word_nr = fast_div(idx);
@@ -630,7 +683,7 @@ class buffered_packed_bit_vector {
             }
 
             uint64_t new_overflow = 0;
-            //If buffers need to be commit to this word:
+            // If buffers need to be commit to this word:
             if (current_word == target_word && current_index < buffer_count) {
                 uint64_t word =
                     underflow_length
@@ -640,7 +693,7 @@ class buffered_packed_bit_vector {
                 underflow >>= underflow_length;
                 uint64_t new_word = 0;
                 uint8_t start_offset = 0;
-                //While there are buffers for this word
+                // While there are buffers for this word
                 while (current_word == target_word) {
                     new_word |=
                         (word << start_offset) & ((MASK << target_offset) - 1);
@@ -705,12 +758,11 @@ class buffered_packed_bit_vector {
     }
 
     void shift_right(uint64_t i, uint64_t current_word) {
-        // TODO: Test
         assert(i < size());
         // number of integers that fit in a memory word
-        assert(int_per_word_ > 0);
-        
-        if (buffer_count > 0) commit();
+        if constexpr (buffer_size != 0) {
+            if (buffer_count > 0) commit();
+        }
 
         assert(size_ + 1 <= fast_mul(words.size()));
 
@@ -721,9 +773,7 @@ class buffered_packed_bit_vector {
 
         auto val = fast_mul(current_word);
         if (val < i) {
-            falling_out =
-                (words[current_word] >> (int_per_word_ - 1) * width_) &
-                uint64_t(1);
+            falling_out = (words[current_word] >> 63) & uint64_t(1);
             uint64_t word = words[current_word];
             uint64_t one_mask = (uint64_t(1) << index) - 1;
             uint64_t zero_mask = ~one_mask;
@@ -742,7 +792,7 @@ class buffered_packed_bit_vector {
         for (uint64_t j = current_word; j < s; ++j) {
             assert(j < words.size());
 
-            falling_out_temp = (words[j] >> (int_per_word_ - 1)) & uint64_t(1);
+            falling_out_temp = (words[j] >> 63) & uint64_t(1);
 
             words[j] = (words[j] << 1) | falling_out;
 
@@ -753,12 +803,10 @@ class buffered_packed_bit_vector {
     // shift left of 1 position elements starting
     // from the (i + 1)-st.
     void shift_left(const uint64_t i) {
-        // TODO: Test?
-        // number of integers that fit in a memory word
-        assert(int_per_word_ > 0);
         assert(i < size_);
-
-        if (buffer_count > 0) commit();
+        if constexpr (buffer_size != 0) {
+            if (buffer_count > 0) commit();
+        }
 
         if (i == (size_ - 1)) {
             set(i, false);
@@ -789,7 +837,7 @@ class buffered_packed_bit_vector {
             words[j] >>= 1;
             const auto fval = fast_mul(j + 1);
             falling_in_idx = fval < size_ ? at(fval) : 0;
-            set(fast_mul(j) + int_per_word_ - 1, falling_in_idx);
+            set(fast_mul(j) + 63, falling_in_idx);
         }
     }
 
@@ -798,11 +846,9 @@ class buffered_packed_bit_vector {
         for (uint64_t i = 0; i < vec.size(); ++i) {
             res += vec.at(i);
         }
-        return res;
+        return vec.psum();
     }
 
-    static constexpr uint8_t width_ = 1;
-    static constexpr uint8_t int_per_word_ = 64;
     static constexpr uint64_t MASK = 1;
     static constexpr uint8_t extra_ = 2;
     static constexpr uint32_t VALUE_MASK = 1;
@@ -813,8 +859,8 @@ class buffered_packed_bit_vector {
     uint64_t psum_ = 0;
     uint64_t size_ = 0;
 
-    uint32_t buffer[buffer_size];
-    uint8_t buffer_count;
+    uint32_t buffer[buffer_size + 1];
+    uint8_t buffer_count = 0;
 };
 
 }  // namespace dyn
