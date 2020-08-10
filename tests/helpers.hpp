@@ -13,7 +13,7 @@ void pv_pushback_test() {
         EXPECT_EQ(bv->psum(), (i + 1) / 2);
     }
     for (size_t i = 0; i < 200; i++) {
-        EXPECT_EQ(bv->at(i), i % 2);
+        EXPECT_EQ(bv->at(i), i % 2) << "Alternating pattern failed at " << i;
     }
     delete bv;
 }
