@@ -55,6 +55,8 @@ typedef succinct_bitvector<spsi<packed_bit_vector,8192,16>> suc_bv;
 
 typedef succinct_bitvector<spsi<buffered_packed_bit_vector<8>,8192,16>> b_suc_bv;
 
+typedef succinct_bitvector<spsi<buffered_packed_bit_vector<0>,8192,16>> ub_suc_bv;
+
 /*
  * succinct/compressed dynamic string implemented with wavelet trees.
  * user can choose (at construction time) between fixed-length / gamma / Huffman encoding of characters.

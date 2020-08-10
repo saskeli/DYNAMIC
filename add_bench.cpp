@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "dynamic/dynamic.hpp"
+#include "include/dynamic/internal/succinct_bitvector.hpp"
 
 void help() {
     std::cout << "Benchmark some dynamic data structures of the library.\n"
@@ -16,6 +17,7 @@ void help() {
     std::cout << "Usage: benchmark <-g|-s> <size> <steps>\n";
     std::cout << "   -s       benchmark succinct bitvector\n";
     std::cout << "   -b       benchmark buffered succinct bitvector\n";
+    std::cout << "   -u       benchmark unbuffered buffered succinct bitvector\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
                  "[0..size] range\n\n";
@@ -208,6 +210,10 @@ int main(int argc, char** argv) {
             std::cout << "Benchmarking buffered succinct bitvector operations"
                       << std::endl;
             benchmark_bv_ops<dyn::b_suc_bv>(n, s);
+        } else if (string(argv[1]).compare("-u") == 0) {
+            std::cout << "Benchmarking unbuffered buffered succinct bitvector operations"
+                      << std::endl;
+            benchmark_bv_ops<dyn::ub_suc_bv>(n, s);
         } else {
             help();
         }
