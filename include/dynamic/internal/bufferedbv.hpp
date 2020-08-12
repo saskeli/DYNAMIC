@@ -384,7 +384,7 @@ class buffered_packed_bit_vector {
                 buffer[buffer_count] = create_buffer(i, 1, x);
                 buffer_count++;
             }
-            if (buffer_count == buffer_size) commit();
+            if (buffer_count > buffer_size) commit();
         } else {
             size_++;
             if (size_ > fast_mul(words.size())) {
