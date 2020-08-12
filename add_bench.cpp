@@ -17,7 +17,8 @@ void help() {
     std::cout << "Usage: benchmark <-g|-s> <size> <steps>\n";
     std::cout << "   -s       benchmark succinct bitvector\n";
     std::cout << "   -b       benchmark buffered succinct bitvector\n";
-    std::cout << "   -u       benchmark unbuffered buffered succinct bitvector\n";
+    std::cout
+        << "   -u       benchmark unbuffered buffered succinct bitvector\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
                  "[0..size] range\n\n";
@@ -28,6 +29,7 @@ void help() {
 
 void benchmark_bv_mix(uint64_t size, uint64_t steps) {
     dyn::b_suc_bv bbv;
+    dyn::ub_suc_bv ubv;
     dyn::suc_bv sbv;
 
     std::random_device rd;
@@ -44,18 +46,19 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
         uint64_t val = gen() % 2;
         bbv.insert(pos, val);
         sbv.insert(pos, val);
+        ubv.insert(pos, val);
     }
 
     double step = 1.0 / (steps - 1);
     std::vector<uint64_t> ops;
     uint64_t checksum = 0;
 
-    std::cout << "P\tbuffered\tunbuffered\tchecksum" << std::endl;
+    std::cout << "P\tcontrol\tbuffered\tunbuffered\tchecksum" << std::endl;
 
     for (uint64_t mul = 0; mul < steps; mul++) {
         double p = step * mul;
         std::cout << p << "\t";
-        std::bernoulli_distribution bool_dist( p );
+        std::bernoulli_distribution bool_dist(p);
         ops.clear();
         checksum = 0;
 
@@ -67,35 +70,50 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
         auto t1 = high_resolution_clock::now();
         for (uint64_t opn = 0; opn < N; opn++) {
             if (ops[opn << 1]) {
-                bbv.insert(ops[(opn << 1) + 1], 1);
+                sbv.insert(ops[(opn << 1) + 1], 1);
             } else {
-                checksum += bbv.at(ops[(opn << 1) + 1]);
+                checksum += sbv.rank(ops[(opn << 1) + 1]);
             }
         }
         auto t2 = high_resolution_clock::now();
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N << "\t";
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N
+                  << "\t";
+
+        checksum <<= 1;
 
         t1 = high_resolution_clock::now();
         for (uint64_t opn = 0; opn < N; opn++) {
             if (ops[opn << 1]) {
-                sbv.insert(ops[(opn << 1) + 1], 1);
+                bbv.insert(ops[(opn << 1) + 1], 1);
             } else {
-                checksum -= sbv.at(ops[(opn << 1) + 1]);
+                checksum -= bbv.rank(ops[(opn << 1) + 1]);
             }
         }
         t2 = high_resolution_clock::now();
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N << "\t";
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N
+                  << "\t";
+
+        t1 = high_resolution_clock::now();
+        for (uint64_t opn = 0; opn < N; opn++) {
+            if (ops[opn << 1]) {
+                ubv.insert(ops[(opn << 1) + 1], 1);
+            } else {
+                checksum -= ubv.rank(ops[(opn << 1) + 1]);
+            }
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N
+                  << "\t";
 
         while (bbv.size() > size) {
             uint64_t pos = gen() % bbv.size();
             bbv.remove(pos);
             sbv.remove(pos);
+            ubv.remove(pos);
         }
 
         std::cout << checksum << std::endl;
     }
-
-    
 }
 
 template <class dyn_bv_t>
@@ -191,7 +209,9 @@ int main(int argc, char** argv) {
     if (argc == 3) {
         uint64_t n = atoi(argv[1]);
         uint64_t s = atof(argv[2]);
-        std::cout << "Comparing operation speeds with different modification probabilities" << std::endl;
+        std::cout << "Comparing operation speeds with different modification "
+                     "probabilities"
+                  << std::endl;
         benchmark_bv_mix(n, s);
     } else if (argc == 4) {
         uint64_t n = atoi(argv[2]);
@@ -211,7 +231,8 @@ int main(int argc, char** argv) {
                       << std::endl;
             benchmark_bv_ops<dyn::b_suc_bv>(n, s);
         } else if (string(argv[1]).compare("-u") == 0) {
-            std::cout << "Benchmarking unbuffered buffered succinct bitvector operations"
+            std::cout << "Benchmarking unbuffered buffered succinct bitvector "
+                         "operations"
                       << std::endl;
             benchmark_bv_ops<dyn::ub_suc_bv>(n, s);
         } else {
