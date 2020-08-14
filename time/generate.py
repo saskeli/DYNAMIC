@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
 
 def main():
     buffers = [2*i for i in range(16)]
-    leafs = [2**10 * i for i in range(16)]
+    leafs = [2**10 * (i + 1) for i in range(16)]
     branches = [4 * (i + 1) for i in range(16)]
 
     for f in listdir("."):

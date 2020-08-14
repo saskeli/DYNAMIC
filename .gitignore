@@ -28,4 +28,5 @@ wm_string
 Testing/
 deb
 time/t*
+time/CMakeLists.txt
 
