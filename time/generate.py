@@ -70,7 +70,7 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
             (double)duration_cast<microseconds>(t2 - t1).count() /
             (target - start);
 
-        std::cout << bv.size() << "\t";
+        std::cout << bv.bit_size() << "\t";
 
         if (!getrusage(RUSAGE_SELF, &rusage)) {
             std::cout << (size_t(rusage.ru_maxrss) * 1024 * 8) << "\t";
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
 
 def main():
     buffers = [2*i for i in range(16)]
-    leafs = [2**10 * (i + 1) for i in range(16)]
+    leafs = [(i + 1) * 2**10  for i in range(16)]
     branches = [4 * (i + 1) for i in range(16)]
 
     for f in listdir("."):
