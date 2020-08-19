@@ -349,43 +349,22 @@ class buffered_packed_bit_vector {
         }
         psum_ += x ? 1 : 0;
         if constexpr (buffer_size != 0) {
-            bool done = false;
-            int a_pos = 0;
-            for (uint8_t idx = 0; idx < buffer_count; idx++) {
-                uint32_t b = buffer_index(buffer[idx]);
-                if (b < i) {
-                    a_pos += buffer_is_insertion(buffer[idx]) ? -1 : 1;
-                    // If this buffered remove can be used to turn the insert
-                    // into a set operation:
-                } else if (b == i && !done &&
-                           !buffer_is_insertion(buffer[idx]) &&
-                           buffer_value(buffer[idx]) ==
-                               ((words[fast_div(b + a_pos)] &
-                                 (MASK << fast_mod(b + a_pos)))
-                                    ? true
-                                    : false)) {
-                    delete_buffer_element(idx--);
-                    done = true;
-                    a_pos += b;
-                    const auto word_nr = fast_div(a_pos);
-                    const auto pos = fast_mod(a_pos);
-                    words[word_nr] ^=
-                        (words[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)
-                            ? (MASK << pos)
-                            : 0;
+            uint8_t idx = buffer_count;
+            while (idx > 0) {
+                uint32_t b = buffer_index(buffer[idx - 1]);
+                if (b > i || (b == i && buffer_is_insertion(buffer[idx - 1]))) {
+                    set_buffer_index(b + 1, idx - 1);
                 } else {
-                    if (!done) {
-                        insert_buffer(idx, create_buffer(i, 1, x));
-                        done = true;
-                    } else {
-                        set_buffer_index(b + 1, idx);
-                    }
+                    break;
                 }
+                idx--;
             }
             size_++;
-            if (!done) {
+            if (idx == buffer_count) {
                 buffer[buffer_count] = create_buffer(i, 1, x);
                 buffer_count++;
+            } else {
+                insert_buffer(idx, create_buffer(i, 1, x));
             }
             if (buffer_count > buffer_size) commit();
         } else {
