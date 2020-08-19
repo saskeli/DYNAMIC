@@ -297,26 +297,28 @@ class buffered_packed_bit_vector {
             auto x = this->at(i);
             psum_ -= x;
             --size_;
-            bool done = false;
-            for (uint8_t idx = 0; idx < buffer_count; idx++) {
-                uint32_t b = buffer_index(buffer[idx]);
-                if (b == i && buffer_is_insertion(buffer[idx]) && !done) {
-                    delete_buffer_element(idx--);
-                    done = true;
-                    continue;
-                }
-                if (b > i) {
-                    if (!done) {
-                        insert_buffer(idx, create_buffer(i, 0, x));
-                        done = true;
+            uint8_t idx = buffer_count;
+            while (idx > 0) {
+                uint32_t b = buffer_index(buffer[idx - 1]);
+                if (b == i) { 
+                    if (buffer_is_insertion(buffer[idx - 1])) {
+                        delete_buffer_element(idx - 1);
+                        return;
                     } else {
-                        set_buffer_index(b - 1, idx);
+                        break;
                     }
+                } else if (b < i) {
+                    break;
+                } else {
+                    set_buffer_index(b - 1, idx - 1);
                 }
+                idx--;
             }
-            if (!done) {
+            if (idx == buffer_count) {
                 buffer[buffer_count] = create_buffer(i, 0, x);
                 buffer_count++;
+            } else {
+                insert_buffer(idx, create_buffer(i, 0, x));
             }
             if (buffer_count > buffer_size) commit();
         } else {
