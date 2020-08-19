@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -626,19 +627,22 @@ class buffered_packed_bit_vector {
     }
 
     void insert_buffer(uint8_t idx, uint32_t buf) {
-        for (uint8_t i = buffer_count; i > idx; i--) {
+        memmove(buffer + idx + 1, buffer + idx,
+                (buffer_count - idx) * sizeof(uint32_t));
+        /*for (uint8_t i = buffer_count; i > idx; i--) {
             buffer[i] = buffer[i - 1];
-        }
+        }*/
         buffer[idx] = buf;
         buffer_count++;
     }
 
     void delete_buffer_element(uint8_t idx) {
-        uint8_t l = --buffer_count;
-        for (; idx < l; idx++) {
+        --buffer_count;
+        memmove(buffer + idx, buffer + idx + 1, (buffer_count - idx) * sizeof(uint32_t));
+        /*for (; idx < l; idx++) {
             buffer[idx] = buffer[idx + 1];
-        }
-        buffer[l] = 0;
+        }*/
+        buffer[buffer_count] = 0;
     }
 
     void set_without_psum_update(uint64_t i, uint64_t x) {

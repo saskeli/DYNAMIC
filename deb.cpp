@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     std::vector<uint32_t> ops;
     
     if (argc > 1) {
-        for (size_t i = 2; i < argc; i++) {
+        for (size_t i = 1; i < argc; i++) {
             ops.push_back(atoi(argv[i]));
         }
         std::cout << "Read " << ops.size() << " operations" << std::endl;
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    uint32_t initial_size_limit = 1000000;
+    uint32_t initial_size_limit = 100000;
     uint32_t num_ops = 20000;
     
     std::cout << "control\tbuffered\tunbuffered" << std::endl;

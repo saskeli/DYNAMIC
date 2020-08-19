@@ -57,7 +57,8 @@ endif()
 
 enable_testing()
 
-add_subdirectory ("tests")
+add_subdirectory("tests")
+add_subdirectory("time")
 
 if(XXSDS_DYN_MULTI_THREADED)
   find_package(OpenMP REQUIRED)
