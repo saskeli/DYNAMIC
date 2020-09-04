@@ -30,3 +30,6 @@ deb
 time/t*
 time/CMakeLists.txt
 
+gmon.out
+
+analysis.txt
