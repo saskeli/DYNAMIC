@@ -14,7 +14,9 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
+#ifdef __AVX2__
 #include <immintrin.h>
+#endif
 
 namespace dyn {
 template <uint8_t buffer_size>
@@ -574,6 +576,7 @@ class buffered_packed_bit_vector {
 
         uint64_t target_word = fast_div(idx);
         uint64_t target_offset = fast_mod(idx);
+#ifdef __AVX2__
         uint64_t num_256 = (target_word - 1) / 4;
         if (num_256) {
             count += popcnt((__m256i *)&words[0], num_256);
@@ -581,6 +584,11 @@ class buffered_packed_bit_vector {
         for (size_t i = num_256 * 4; i < target_word; i++) {
             count += __builtin_popcountll(words[i]);
         }
+#else
+        for (size_t i = 0; i < target_word; i++) {
+            count += __builtin_popcountll(words[i]);
+        }
+#endif
         count += __builtin_popcountll(words[target_word] &
                                       ((MASK << target_offset) - 1));
         return count;
@@ -837,7 +845,7 @@ class buffered_packed_bit_vector {
             set(fast_mul(j) + 63, falling_in_idx);
         }
     }
-
+#ifdef __AVX2__
     __m256i popcount(const __m256i v) const {
         const __m256i m1 = _mm256_set1_epi8(0x55);
         const __m256i m2 = _mm256_set1_epi8(0x33);
@@ -905,7 +913,7 @@ class buffered_packed_bit_vector {
                static_cast<uint64_t>(_mm256_extract_epi64(total, 2)) +
                static_cast<uint64_t>(_mm256_extract_epi64(total, 3));
     }
-
+#endif
     uint64_t sum(buffered_packed_bit_vector& vec) const {
         uint64_t res = 0;
         for (uint64_t i = 0; i < vec.size(); ++i) {
