@@ -37,7 +37,7 @@ include_directories(${INSTALL_DIR}/src/hopscotch_map/include)
 
 message("Building in ${CMAKE_BUILD_TYPE} mode")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17 -march=native")
 
 FetchContent_Declare(
   googletest
@@ -66,9 +66,9 @@ if(XXSDS_DYN_MULTI_THREADED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif(XXSDS_DYN_MULTI_THREADED)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -ggdb -march=native -mavx -mavx2")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ggdb -Ofast -fstrict-aliasing -DNDEBUG -march=native -mavx2 -mavx")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g -ggdb -Ofast -fstrict-aliasing -mavx2 -march=native -mavx")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -fstrict-aliasing -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g -ggdb -Ofast -fstrict-aliasing")
 
 add_executable(debug debug.cpp)
 add_executable(deb deb.cpp)
