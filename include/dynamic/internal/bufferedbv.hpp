@@ -577,7 +577,8 @@ class buffered_packed_bit_vector {
         uint64_t target_word = fast_div(idx);
         uint64_t target_offset = fast_mod(idx);
 #ifdef __AVX2__
-        uint64_t num_256 = (target_word - 1) / 4;
+        uint64_t num_256 = target_word ? (target_word - 1) / 4 : target_word;
+        std::cout << "Words pointer: " << &words[0] << std::endl;
         if (num_256) {
             count += popcnt((__m256i *)&words[0], num_256);
         }
@@ -875,6 +876,9 @@ class buffered_packed_bit_vector {
 
         const uint64_t limit = size - size % 16;
         uint64_t i = 0;
+        std::cout << "Calculating popcounts of " << size << " avx256 elements" << std::endl;
+        std::cout << "With " << limit << " blocks of 16" << std::endl;
+        std::cout << "Data pointer: " << data << std::endl;
 
         for (; i < limit; i += 16) {
             CSA(twosA, ones, ones, data[i + 0], data[i + 1]);
@@ -904,9 +908,11 @@ class buffered_packed_bit_vector {
         total = _mm256_add_epi64(
             total, _mm256_slli_epi64(popcount(twos), 1));  // += 2 * ...
         total = _mm256_add_epi64(total, popcount(ones));
-
-        for (; i < size; i++)
+        std::cout << "at index " << i << std::endl;
+        for (; i < size; i++) {
+            std::cout << "i = " << i << std::endl;
             total = _mm256_add_epi64(total, popcount(data[i]));
+        }
 
         return static_cast<uint64_t>(_mm256_extract_epi64(total, 0)) +
                static_cast<uint64_t>(_mm256_extract_epi64(total, 1)) +
