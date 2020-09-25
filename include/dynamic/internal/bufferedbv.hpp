@@ -14,9 +14,8 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
-#ifdef __AVX2__
-#include <immintrin.h>
-#endif
+
+#include "dynamic/internal/libpopcnt.h"
 
 namespace dyn {
 template <uint8_t buffer_size>
@@ -576,20 +575,9 @@ class buffered_packed_bit_vector {
 
         uint64_t target_word = fast_div(idx);
         uint64_t target_offset = fast_mod(idx);
-#ifdef __AVX2__
-        uint64_t num_256 = target_word ? (target_word - 1) / 4 : target_word;
-        std::cout << "Words pointer: " << &words[0] << std::endl;
-        if (num_256) {
-            count += popcnt((__m256i *)&words[0], num_256);
-        }
-        for (size_t i = num_256 * 4; i < target_word; i++) {
-            count += __builtin_popcountll(words[i]);
-        }
-#else
-        for (size_t i = 0; i < target_word; i++) {
-            count += __builtin_popcountll(words[i]);
-        }
-#endif
+        if (target_word)
+            count += pop::popcnt(&words[0], target_word * 8);
+        
         count += __builtin_popcountll(words[target_word] &
                                       ((MASK << target_offset) - 1));
         return count;
@@ -846,80 +834,7 @@ class buffered_packed_bit_vector {
             set(fast_mul(j) + 63, falling_in_idx);
         }
     }
-#ifdef __AVX2__
-    __m256i popcount(const __m256i v) const {
-        const __m256i m1 = _mm256_set1_epi8(0x55);
-        const __m256i m2 = _mm256_set1_epi8(0x33);
-        const __m256i m4 = _mm256_set1_epi8(0x0F);
 
-        const __m256i t1 = _mm256_sub_epi8(v, (_mm256_srli_epi16(v, 1) & m1));
-        const __m256i t2 =
-            _mm256_add_epi8(t1 & m2, (_mm256_srli_epi16(t1, 2) & m2));
-        const __m256i t3 = _mm256_add_epi8(t2, _mm256_srli_epi16(t2, 4)) & m4;
-        return _mm256_sad_epu8(t3, _mm256_setzero_si256());
-    }
-
-    void CSA(__m256i& h, __m256i& l, __m256i a, __m256i b, __m256i c) const {
-        const __m256i u = a ^ b;
-        h = (a & b) | (u & c);
-        l = u ^ c;
-    }
-
-    uint64_t popcnt(const __m256i* data, const uint64_t size) const {
-        __m256i total = _mm256_setzero_si256();
-        __m256i ones = _mm256_setzero_si256();
-        __m256i twos = _mm256_setzero_si256();
-        __m256i fours = _mm256_setzero_si256();
-        __m256i eights = _mm256_setzero_si256();
-        __m256i sixteens = _mm256_setzero_si256();
-        __m256i twosA, twosB, foursA, foursB, eightsA, eightsB;
-
-        const uint64_t limit = size - size % 16;
-        uint64_t i = 0;
-        std::cout << "Calculating popcounts of " << size << " avx256 elements" << std::endl;
-        std::cout << "With " << limit << " blocks of 16" << std::endl;
-        std::cout << "Data pointer: " << data << std::endl;
-
-        for (; i < limit; i += 16) {
-            CSA(twosA, ones, ones, data[i + 0], data[i + 1]);
-            CSA(twosB, ones, ones, data[i + 2], data[i + 3]);
-            CSA(foursA, twos, twos, twosA, twosB);
-            CSA(twosA, ones, ones, data[i + 4], data[i + 5]);
-            CSA(twosB, ones, ones, data[i + 6], data[i + 7]);
-            CSA(foursB, twos, twos, twosA, twosB);
-            CSA(eightsA, fours, fours, foursA, foursB);
-            CSA(twosA, ones, ones, data[i + 8], data[i + 9]);
-            CSA(twosB, ones, ones, data[i + 10], data[i + 11]);
-            CSA(foursA, twos, twos, twosA, twosB);
-            CSA(twosA, ones, ones, data[i + 12], data[i + 13]);
-            CSA(twosB, ones, ones, data[i + 14], data[i + 15]);
-            CSA(foursB, twos, twos, twosA, twosB);
-            CSA(eightsB, fours, fours, foursA, foursB);
-            CSA(sixteens, eights, eights, eightsA, eightsB);
-
-            total = _mm256_add_epi64(total, popcount(sixteens));
-        }
-
-        total = _mm256_slli_epi64(total, 4);  // * 16
-        total = _mm256_add_epi64(
-            total, _mm256_slli_epi64(popcount(eights), 3));  // += 8 * ...
-        total = _mm256_add_epi64(
-            total, _mm256_slli_epi64(popcount(fours), 2));  // += 4 * ...
-        total = _mm256_add_epi64(
-            total, _mm256_slli_epi64(popcount(twos), 1));  // += 2 * ...
-        total = _mm256_add_epi64(total, popcount(ones));
-        std::cout << "at index " << i << std::endl;
-        for (; i < size; i++) {
-            std::cout << "i = " << i << std::endl;
-            total = _mm256_add_epi64(total, popcount(data[i]));
-        }
-
-        return static_cast<uint64_t>(_mm256_extract_epi64(total, 0)) +
-               static_cast<uint64_t>(_mm256_extract_epi64(total, 1)) +
-               static_cast<uint64_t>(_mm256_extract_epi64(total, 2)) +
-               static_cast<uint64_t>(_mm256_extract_epi64(total, 3));
-    }
-#endif
     uint64_t sum(buffered_packed_bit_vector& vec) const {
         uint64_t res = 0;
         for (uint64_t i = 0; i < vec.size(); ++i) {
