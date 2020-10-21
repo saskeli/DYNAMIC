@@ -31,8 +31,8 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
     using std::chrono::high_resolution_clock;
     using std::chrono::microseconds;
 
-    double startexp = log2(double(100.0));
-    double delta = (log2(double(size)) - log2(100.0)) / steps;
+    double startexp = log2(double(1000000.0));
+    double delta = (log2(double(size)) - log2(1000000.0)) / steps;
     uint64_t ops = 100000;
 
     std::cout << "Size\t"
@@ -48,7 +48,7 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
               << "select\t"
               << "checksum" << std::endl;
 
-    for (uint64_t i = 0; i < 100; i++) {
+    for (uint64_t i = 0; i < 1000000; i++) {
         bv.insert(gen() % (i + 1), gen() % 2);
     }
 
@@ -128,8 +128,10 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
 }
 
 int main(int argc, char** argv) {
-    uint64_t n = atoi(argv[1]);
-    uint64_t s = atof(argv[2]);
+    uint64_t n;
+    std::sscanf(argv[1], "%lu", &n);
+    uint64_t s;
+    std::sscanf(argv[2], "%lu", &s);
     benchmark_bv_ops<bv>(n, s);
 }"""
 
@@ -141,9 +143,9 @@ int main(int argc, char** argv) {
         out_file.write(body)
 
 def main():
-    buffers = [2*i for i in range(16)]
-    leafs = [(i + 1) * 2**10  for i in range(16)]
-    branches = [4 * (i + 1) for i in range(16)]
+    buffers = [4*i for i in range(16)]
+    leafs = [(i * 2 + 1) * 2**10  for i in range(16)]
+    branches = [8 * (i + 1) for i in range(16)]
 
     for f in listdir("."):
         if f.endswith("cpp"):

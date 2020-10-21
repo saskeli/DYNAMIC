@@ -67,7 +67,7 @@ if(XXSDS_DYN_MULTI_THREADED)
 endif(XXSDS_DYN_MULTI_THREADED)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -fstrict-aliasing -g -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -fstrict-aliasing -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g -ggdb -Ofast -fstrict-aliasing")
 
 add_executable(debug debug.cpp)
@@ -80,6 +80,7 @@ add_executable(cw-bwt cw-bwt.cpp)
 
 add_executable(benchmark benchmark.cpp)
 add_executable(add_bench add_bench.cpp)
+add_executable(exact_bench exact_bench.cpp)
 
 add_executable(wm_string wm_string.cpp)
 

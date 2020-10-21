@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <random>
 #include <vector>
+#include <stdio.h>
 
 #include "dynamic/dynamic.hpp"
 #include "include/dynamic/internal/succinct_bitvector.hpp"
@@ -50,7 +51,7 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
     }
 
     double step = 1.0 / (steps - 1);
-    std::vector<uint64_t> ops;
+    std::vector<uint64_t> ops, loc, val;
     uint64_t checksum = 0;
 
     std::cout << "P\tcontrol\tbuffered\tunbuffered\tchecksum" << std::endl;
@@ -64,15 +65,16 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
 
         for (uint64_t opn = 0; opn < N; opn++) {
             ops.push_back(bool_dist(gen));
-            ops.push_back(gen() % size);
+            loc.push_back(gen() % size);
+            val.push_back(gen() % 2);
         }
 
         auto t1 = high_resolution_clock::now();
         for (uint64_t opn = 0; opn < N; opn++) {
-            if (ops[opn << 1]) {
-                sbv.insert(ops[(opn << 1) + 1], 1);
+            if (ops[opn]) {
+                sbv.insert(loc[opn], val[opn]);
             } else {
-                checksum += sbv.rank(ops[(opn << 1) + 1]);
+                checksum += sbv.rank(loc[opn]);
             }
         }
         auto t2 = high_resolution_clock::now();
@@ -83,10 +85,10 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
 
         t1 = high_resolution_clock::now();
         for (uint64_t opn = 0; opn < N; opn++) {
-            if (ops[opn << 1]) {
-                bbv.insert(ops[(opn << 1) + 1], 1);
+            if (ops[opn]) {
+                bbv.insert(loc[opn], val[opn]);
             } else {
-                checksum -= bbv.rank(ops[(opn << 1) + 1]);
+                checksum -= bbv.rank(loc[opn]);
             }
         }
         t2 = high_resolution_clock::now();
@@ -95,10 +97,10 @@ void benchmark_bv_mix(uint64_t size, uint64_t steps) {
 
         t1 = high_resolution_clock::now();
         for (uint64_t opn = 0; opn < N; opn++) {
-            if (ops[opn << 1]) {
-                ubv.insert(ops[(opn << 1) + 1], 1);
+            if (ops[opn]) {
+                ubv.insert(loc[opn], val[opn]);
             } else {
-                checksum -= ubv.rank(ops[(opn << 1) + 1]);
+                checksum -= ubv.rank(loc[opn]);
             }
         }
         t2 = high_resolution_clock::now();
@@ -127,8 +129,8 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
     using std::chrono::high_resolution_clock;
     using std::chrono::microseconds;
 
-    double startexp = log2(double(100.0));
-    double delta = (log2(double(size)) - log2(100.0)) / steps;
+    double startexp = log2(double(1000000.0));
+    double delta = (log2(double(size)) - log2(1000000.0)) / steps;
     uint64_t ops = 100000;
     std::cout << "startexp: " << startexp << ". delta: " << delta << std::endl;
 
@@ -206,34 +208,37 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
 }
 
 int main(int argc, char** argv) {
+    uint64_t n;
+    uint64_t s;
     if (argc == 3) {
-        uint64_t n = atoi(argv[1]);
-        uint64_t s = atof(argv[2]);
+        std::sscanf(argv[1], "%lu", &n);
+        std::sscanf(argv[2], "%lu", &s);
         std::cout << "Comparing operation speeds with different modification "
-                     "probabilities"
-                  << std::endl;
+                     "probabilities for " << n << " element vector in "
+                  << s << " steps " << std::endl;
         benchmark_bv_mix(n, s);
     } else if (argc == 4) {
-        uint64_t n = atoi(argv[2]);
-        uint64_t s = atof(argv[3]);
-        if (n <= 100) {
-            std::cout << "size should be significantly over 100" << std::endl;
+        std::sscanf(argv[2], "%lu", &n);
+        std::sscanf(argv[3], "%lu", &s);
+        if (n < 1000000) {
+            std::cout << "size should be greater than or equal to 1000000"
+                      << std::endl;
             return 1;
         }
-        std::cout << "size = " << n << ". steps = " << s << std::endl;
         if (string(argv[1]).compare("-s") == 0) {
-            std::cout << "Benchmarking succinct bitvector operations"
-                      << std::endl;
+            std::cout << "Benchmarking succinct bitvector operations up to "
+                      << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::suc_bv>(n, s);
 
         } else if (string(argv[1]).compare("-b") == 0) {
-            std::cout << "Benchmarking buffered succinct bitvector operations"
-                      << std::endl;
+            std::cout
+                << "Benchmarking buffered succinct bitvector operations up to "
+                << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::b_suc_bv>(n, s);
         } else if (string(argv[1]).compare("-u") == 0) {
             std::cout << "Benchmarking unbuffered buffered succinct bitvector "
-                         "operations"
-                      << std::endl;
+                         "operations up to "
+                      << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::ub_suc_bv>(n, s);
         } else {
             help();

@@ -12,6 +12,7 @@ Makefile
 cmake_install.cmake
 hopscotch_map-prefix/
 *.log
+*.csv
 .vscode/
 add_bench
 
@@ -24,6 +25,7 @@ h0_lz77
 rle_bwt
 rle_lz77_v1
 rle_lz77_v2
+exact_bench
 wm_string
 Testing/
 deb

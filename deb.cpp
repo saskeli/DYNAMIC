@@ -68,11 +68,11 @@ int main(int argc, char **argv) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    uint32_t initial_size_limit = 100;
-    uint32_t num_ops = 20;
+    uint32_t initial_size_limit = 100000;
+    uint32_t num_ops = 10000;
     
     std::cout << "control\tbuffered\tunbuffered" << std::endl;
-    for (size_t i = 0; i < 10000; i++) {
+    for (size_t i = 0; i < 100000; i++) {
         ops.clear();
         uint16_t size = gen() % initial_size_limit;
         ops.push_back(size);

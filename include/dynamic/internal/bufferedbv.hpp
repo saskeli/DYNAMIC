@@ -73,6 +73,15 @@ class buffered_packed_bit_vector {
             }
         }
         std::cout << std::endl;
+
+        if constexpr (buffer_size != 0) {
+            std::cout << " Inline:";
+            for (size_t i = 0; i < size_; i++) {
+                if ((i & 63) == 0) std::cout << "\n ";
+                std::cout << at(i);
+            }
+            std::cout << std::endl;
+        }
     }
 
     bool at(uint64_t i) const {
@@ -115,18 +124,30 @@ class buffered_packed_bit_vector {
         assert(size_ > 0);
         assert(x <= psum_);
 
+        /*
+        std::cout << "search(" << x << ") called. Buffer size is "
+                  << int(buffer_count) << std::endl;
+        print();//*/
+
+        uint64_t w_pop = 0;
+        uint64_t w_pos = 0;
         uint64_t pop = 0;
         uint64_t pos = 0;
-        uint8_t current_buffer = 0;
-        int8_t a_pos_offset = 0;
 
         // optimization for bitvectors
-
-        for (uint64_t j = 0; j < words.size(); ++j) {
-            pop += __builtin_popcountll(words[j]);
-            pos += 64;
+        uint64_t a = 0;
+        uint64_t lp = a;
+        uint64_t b = (words.size() - 1);
+        while (a < b) {
+            uint64_t m = (a + 1 + b) / 2;
+            w_pop += m > lp ? pop::popcnt(&words[lp], (m - lp) * 8)
+                          : -pop::popcnt(&words[m], (lp - m) * 8);
+            w_pos += m > lp ? ((m - lp) * 64) : -(lp - m) * 64;
             if constexpr (buffer_size != 0) {
-                for (uint8_t b = current_buffer; b < buffer_count; b++) {
+                int8_t a_pos_offset = 0;
+                pop = w_pop;
+                pos = w_pos;
+                for (uint8_t b = 0; b < buffer_count; b++) {
                     uint32_t b_index = buffer_index(buffer[b]);
                     if (b_index < pos) {
                         if (buffer_is_insertion(buffer[b])) {
@@ -134,27 +155,41 @@ class buffered_packed_bit_vector {
                             pos++;
                             a_pos_offset--;
                         } else {
-                            pop -= (words[fast_div(b_index + a_pos_offset)] &
-                                    (MASK << fast_mod(b_index + a_pos_offset)))
-                                       ? 1
-                                       : 0;
+                            pop -= buffer_value(buffer[b]) ? 1 : 0;
                             pos--;
                             a_pos_offset++;
                         }
-                        current_buffer++;
                     } else {
                         break;
                     }
                 }
             }
-            if (pop >= x) break;
+            /*
+            std::cout << "a: " << a << ", b: " << b << ", lp: " << lp
+                      << ", m: " << m << ", pop: " << pop << ", pos: " << pos
+                      << ", x: " << x << std::endl;//*/
+            lp = m;
+            if (pop > x)
+                b = m - 1;
+            else
+                a = m;
         }
-        pos = size_ < pos ? size_ : pos;
         // end optimization for bitvectors
-        while (pop >= x) {
-            pop -= at(--pos);
+        
+        /*
+        std::cout << "Walking from " << pop << " at position " << pos
+                  << ". a, b: " << b << ", lp: " << lp << std::endl;//*/
+        if (pop >= x) {
+            while (pop >= x) {
+                pop -= at(--pos);
+            }
+            return pos;
         }
-        return pos;
+
+        while (pop < x) {
+            pop += at(pos++);
+        }
+        return --pos;
     }
 
     /*
@@ -575,9 +610,8 @@ class buffered_packed_bit_vector {
 
         uint64_t target_word = fast_div(idx);
         uint64_t target_offset = fast_mod(idx);
-        if (target_word)
-            count += pop::popcnt(&words[0], target_word * 8);
-        
+        if (target_word) count += pop::popcnt(&words[0], target_word * 8);
+
         count += __builtin_popcountll(words[target_word] &
                                       ((MASK << target_offset) - 1));
         return count;

@@ -30,6 +30,7 @@ void help() {
     cout << "   -g       benchmark gap bitvector" << endl;
     cout << "   -s       benchmark succinct bitvector" << endl;
     cout << "   -b       benchmark buffered succinct bitvector" << endl;
+    cout << "   -u       benchmark un-buffered succinct bitvector" << endl;
     cout << "   <size>   number of bits in the bitvector" << endl;
     cout << "   <P>      probability of a bit set in [0,1]" << endl << endl;
     cout << "Example: benchmark -g 1000000 0.01" << endl;
@@ -157,6 +158,9 @@ int main(int argc, char** argv) {
     } else if (string(argv[1]).compare("-b") == 0) {
         cout << "Benchmarking buffered succinct bitvector" << endl;
         benchmark_bv<b_suc_bv>(n, P);
+    } else if (string(argv[1]).compare("-u") == 0) {
+        cout << "Benchmarking un-buffered succinct bitvector" << endl;
+        benchmark_bv<ub_suc_bv>(n, P);
     } else
         help();
 }

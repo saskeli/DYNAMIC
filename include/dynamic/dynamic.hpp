@@ -53,7 +53,7 @@ typedef gap_bitvector<packed_spsi> gap_bv;
  */
 typedef succinct_bitvector<spsi<packed_bit_vector,8192,16>> suc_bv;
 
-typedef succinct_bitvector<spsi<buffered_packed_bit_vector<8>,8192,16>> b_suc_bv;
+typedef succinct_bitvector<spsi<buffered_packed_bit_vector<16>,8192,16>> b_suc_bv;
 
 typedef succinct_bitvector<spsi<buffered_packed_bit_vector<0>,8192,16>> ub_suc_bv;
 
