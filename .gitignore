@@ -13,7 +13,10 @@ cmake_install.cmake
 hopscotch_map-prefix/
 *.log
 *.csv
+<<<<<<< HEAD
 *.tsv
+=======
+>>>>>>> f38035b (new benchmark)
 .vscode/
 add_bench
 
