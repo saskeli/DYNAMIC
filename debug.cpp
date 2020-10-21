@@ -15,11 +15,49 @@ typedef dyn::buffered_packed_bit_vector<8> pv;
 b_suc_bv* generate_tree(const uint64_t amount) {
     auto tree = new b_suc_bv();
 
+   dyn::succinct_spsi spsi;
+   dyn::spsi_check<> check;
+
+   int n=100000;
+   int sigma=120;
+
+   srand(time(NULL));
+
+   for(int i=0;i<n;++i){
+
+	   cout << "insert number " << i << endl;
+
+	   int j = rand()%(i+1);
+	   int x = rand()%sigma;
+
+	   spsi.insert(j,x);
+	   check.insert(j,x);
+
+   }
+
     for (uint64_t i = 0; i < amount; i++) {
         tree->push_back(i % 2);
     }
     return tree;
 }
+
+suc_bv* generate_c_tree(const uint64_t amount) {
+    auto tree = new suc_bv();
+
+    for (uint64_t i = 0; i < amount; i++) {
+        tree->push_back(i % 2);
+    }
+    return tree;
+}
+
+pv* generate_pv(const uint64_t amount) {
+    auto tree = new pv();
+    for (uint64_t i = 0; i < amount; i++) {
+        tree->push_back(i % 2);
+    }
+    return tree;
+}
+
 
 suc_bv* generate_c_tree(const uint64_t amount) {
     auto tree = new suc_bv();

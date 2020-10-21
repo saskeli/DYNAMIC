@@ -348,19 +348,7 @@ TEST(BBV0, Rank100000) { rank_test<ub_suc_bv>(100000); }
 
 TEST(BBV0, Rank1000000) { rank_test<ub_suc_bv>(1000000); }
 
-TEST(BBV0, Rank0_10) { rank0_test<b_suc_bv0>(10); }
-
-TEST(BBV0, Rank0_100) { rank0_test<b_suc_bv0>(100); }
-
-TEST(BBV0, Rank0_1000) { rank0_test<b_suc_bv0>(1000); }
-
-TEST(BBV0, Rank0_10000) { rank0_test<b_suc_bv0>(10000); }
-
-TEST(BBV0, Rank0_100000) { rank0_test<b_suc_bv0>(100000); }
-
-TEST(BBV0, Rank0_1000000) { rank0_test<b_suc_bv0>(1000000); }
-
-TEST(BBV0, Remove10) { remove_test<b_suc_bv0>(10); }
+TEST(BBV0, Remove10) { remove_test<ub_suc_bv>(10); }
 
 TEST(BBV0, Remove100) { remove_test<ub_suc_bv>(100); }
 
@@ -407,3 +395,4 @@ TEST(BBV0, Select0_10000) { select0_test<b_suc_bv0>(10000); }
 TEST(BBV0, Select0_100000) { select0_test<b_suc_bv0>(100000); }
 
 TEST(BBV0, Select0_1000000) { select0_test<b_suc_bv0>(1000000); }
+

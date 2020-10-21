@@ -183,6 +183,7 @@ class buffered_packed_bit_vector {
             while (pop >= x) {
                 pop -= at(--pos);
             }
+            return pos;
         }
 
         while (pop < x) {
@@ -607,8 +608,19 @@ class buffered_packed_bit_vector {
 
         uint64_t target_word = fast_div(idx);
         uint64_t target_offset = fast_mod(idx);
+<<<<<<< HEAD
         if (target_word) count += pop::popcnt(&words[0], target_word * 8);
 
+=======
+<<<<<<< HEAD
+        for (size_t i = 0; i < target_word; i++) {
+            count += __builtin_popcountll(words[i]);
+        }
+=======
+        if (target_word) count += pop::popcnt(&words[0], target_word * 8);
+
+>>>>>>> 28e06f3 (working AVX stuff)
+>>>>>>> fbc3f73 (working AVX stuff)
         count += __builtin_popcountll(words[target_word] &
                                       ((MASK << target_offset) - 1));
         return count;
