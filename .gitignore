@@ -13,10 +13,7 @@ cmake_install.cmake
 hopscotch_map-prefix/
 *.log
 *.csv
-<<<<<<< HEAD
 *.tsv
-=======
->>>>>>> f38035b (new benchmark)
 .vscode/
 add_bench
 
@@ -27,6 +24,7 @@ benchmark
 cw-bwt
 h0_lz77
 rle_bwt
+space_suc
 rle_lz77_v1
 space_suc
 rle_lz77_v2
