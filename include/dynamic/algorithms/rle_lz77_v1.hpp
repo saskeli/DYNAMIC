@@ -103,9 +103,7 @@ public:
 					}
 
 				}
-
 				RLBWT.extend( uchar(c) );
-
 				j++;
 
 			}
@@ -150,10 +148,8 @@ public:
 	 *
 	 */
 	void parse(istream& in, ostream& out, ulint skip = 1, bool verbose = false){
-
 		build_bwt(in,verbose);
 		bwt_to_lz77(out,skip,verbose);
-
 	}
 
 	/*
@@ -175,7 +171,6 @@ public:
 	 *
 	 */
 	void bwt_to_lz77(ostream& out, ulint skip = 1, bool verbose = false){
-
 		assert(skip>0);
 
 		ulint z = 0;//number of phrases

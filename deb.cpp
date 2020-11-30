@@ -9,7 +9,7 @@
 #include "runners.hpp"
 
 int8_t get_op(std::vector<uint32_t> &ops, std::mt19937 &gen, uint32_t size) {
-    uint32_t selection = gen() % 7;
+    uint32_t selection = gen() % 9;
     ops.push_back(selection);
     switch (selection) {
         case 0:
@@ -32,8 +32,14 @@ int8_t get_op(std::vector<uint32_t> &ops, std::mt19937 &gen, uint32_t size) {
         case 5:
             ops.push_back(gen());
             return 0;
-        default:
+        case 6:
             ops.push_back(size ? gen() % size: 0);
+            return 0;
+        case 7:
+            ops.push_back(size ? gen() % size: 0);
+            return 0;
+        default:
+            ops.push_back(gen());
             return 0;
     }
 }
@@ -68,8 +74,8 @@ int main(int argc, char **argv) {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    uint32_t initial_size_limit = 100000;
-    uint32_t num_ops = 20000;
+    uint32_t initial_size_limit = 10000;
+    uint32_t num_ops = 2000;
     
     std::cout << "control\tbuffered\tunbuffered" << std::endl;
     for (size_t i = 0; i < 10000; i++) {

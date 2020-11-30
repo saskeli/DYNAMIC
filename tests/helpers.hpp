@@ -310,11 +310,40 @@ void rank_test(const uint64_t size) {
 }
 
 template <class T>
+void rank0_test(const uint64_t size) {
+    auto tree = generate_tree<T>(size);
+    uint64_t sum = 0;
+    for (uint64_t i = 1; i <= size; i++) {
+        auto val = tree->rank(i, false);
+        sum += tree->at(i - 1);
+        EXPECT_EQ(i - sum, val);
+        if (i - sum != val) {
+            break;
+        }
+    }
+    delete tree;
+}
+
+template <class T>
 void select_test(const uint64_t size) {
     auto tree = generate_tree<T>(size);
     for (uint64_t i = 0; i < size / 2; i++) {
         auto val = tree->select(i);
         EXPECT_EQ(i * 2 + 1, val)
+            << "Expected select(" << i << ") = " << (i * 2 + 1);
+        if ((i - 1) * 2 != val) {
+            break;
+        }
+    }
+    delete tree;
+}
+
+template <class T>
+void select0_test(const uint64_t size) {
+    auto tree = generate_tree<T>(size);
+    for (uint64_t i = 0; i < size / 2; i++) {
+        auto val = tree->select(i, false);
+        EXPECT_EQ(i * 2, val)
             << "Expected select(" << i << ") = " << (i * 2 + 1);
         if ((i - 1) * 2 != val) {
             break;
