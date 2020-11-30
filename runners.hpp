@@ -43,10 +43,23 @@ uint8_t execute_op(T &buffered_tree, std::vector<uint32_t> &ops, size_t i,
             out = buffered_tree.select(ops[i + 1] % ba_r);
             }
             return 2;
-        default:
+        case 6:
             out = 0;
             if (s == 0) return 2;
             out = buffered_tree.at(ops[i + 1] % s);
+            return 2;
+        case 7:
+            out = 0;
+            if (s == 0) return 2;
+            out = buffered_tree.rank(ops[i + 1] % s);
+            return 2;
+        default: {
+            out = 0;
+            if (s == 0) return 2;
+            uint64_t ba_r0 = buffered_tree.rank(buffered_tree.size() - 1);
+            if (ba_r0 == 0) return 2;
+            out = buffered_tree.select(ops[i + 1] % ba_r0);
+            }
             return 2;
     }
 }

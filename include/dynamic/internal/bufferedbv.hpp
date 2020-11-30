@@ -183,7 +183,6 @@ class buffered_packed_bit_vector {
             while (pop >= x) {
                 pop -= at(--pos);
             }
-            return pos;
         }
 
         while (pop < x) {
@@ -201,18 +200,15 @@ class buffered_packed_bit_vector {
     uint64_t search_0(uint64_t x) const {
         assert(size_ > 0);
         assert(x <= size_ - psum_);
-
-        uint64_t s = 0;
         uint64_t pop = 0;
         uint64_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
         auto div = fast_div(size_);
-        for (uint64_t j = 0; j < div && s < x; ++j) {
+        for (uint64_t j = 0; j < div; ++j) {
             pop = 64 - __builtin_popcountll(words[j]);
             pos += 64;
-            s += pop;
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count; b++) {
                     uint32_t b_index = buffer_index(buffer[b]);
@@ -238,9 +234,10 @@ class buffered_packed_bit_vector {
             if (pop >= x) break;
         }
 
+
         pos = size_ < pos ? size_ : pos;
 
-        while (pop >= x) {
+        while (pop >= x && pos > 0) {
             pop -= at(--pos) ? 0 : 1;
         }
         return pos;

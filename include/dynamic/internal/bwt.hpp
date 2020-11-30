@@ -122,13 +122,11 @@ public:
 	void extend(char_type c){
 
 		assert(c!=TERMINATOR);
-
 		//position in F where c has to be inserted
 		ulint pos_in_F;
 
 		//are we inserting a new character?
 		if(alphabet.find(c)==alphabet.end()){
-
 			//iterator to character immediately after c (in lex order)
 			//or alphabet.end() if c is bigger than all a in alphabet
 			auto upit = alphabet.upper_bound(c);
@@ -140,15 +138,12 @@ public:
 			alphabet.insert(c);
 
 		}else{
-
 			//number of cs before terminator in L
 			ulint c_before = L.rank(terminator_position,c);
 			pos_in_F = 	F.select(0,c) + c_before;
 
 		}
-
 		F.insert(pos_in_F,c);
-
 		L.insert(terminator_position,c);
 
 		//add 1 to take into account terminator in F
