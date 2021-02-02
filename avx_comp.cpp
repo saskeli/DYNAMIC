@@ -31,7 +31,7 @@ void write_procedure(uint64_t n) {
     }
 
     for (size_t i = 0; i < n; i++) {
-        std::cout << (gen() & n) << std::endl;
+        std::cout << (gen() % n) << std::endl;
     }
 }
 
