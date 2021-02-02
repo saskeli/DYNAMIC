@@ -39,7 +39,7 @@ void run_test() {
     uint64_t n, v;
     std::cin >> n;
 
-    dyn::b_suc_bv bv;
+    dyn::ub_suc_bv bv;
     for (size_t i = 0; i < n; i++) {
         std::cin >> v;
         bv.insert(v, i % 2);
