@@ -13,10 +13,7 @@ cmake_install.cmake
 hopscotch_map-prefix/
 *.log
 *.csv
-<<<<<<< HEAD
 *.tsv
-=======
->>>>>>> 28e06f3 (working AVX stuff)
 .vscode/
 add_bench
 
@@ -29,12 +26,14 @@ h0_lz77
 rle_bwt
 space_suc
 rle_lz77_v1
-space_suc
 rle_lz77_v2
 exact_bench
 wm_string
 Testing/
 deb
+demo
+demo.cpp
+avx_comp
 time/t*
 time/CMakeLists.txt
 

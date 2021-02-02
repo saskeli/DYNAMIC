@@ -58,25 +58,6 @@ pv* generate_pv(const uint64_t amount) {
     return tree;
 }
 
-
-suc_bv* generate_c_tree(const uint64_t amount) {
-    auto tree = new suc_bv();
-
-    for (uint64_t i = 0; i < amount; i++) {
-        tree->push_back(i % 2);
-    }
-    return tree;
-}
-
-pv* generate_pv(const uint64_t amount) {
-    auto tree = new pv();
-    for (uint64_t i = 0; i < amount; i++) {
-        tree->push_back(i % 2);
-    }
-    return tree;
-}
-
-
 int main() {
     std::vector<uint32_t> ops{98, 5,  21266, 1, 64, 2, 9, 1,  3, 1, 5, 26631,
                               0,  87, 1,     2, 94, 0, 1, 63, 3, 1, 5, 4707};

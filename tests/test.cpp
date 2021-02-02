@@ -382,17 +382,17 @@ TEST(BBV0, Select10000) { select_test<ub_suc_bv>(10000); }
 
 TEST(BBV0, Select100000) { select_test<ub_suc_bv>(100000); }
 
-TEST(BBV0, Select1000000) { select_test<b_suc_bv0>(1000000); }
+TEST(BBV0, Select1000000) { select_test<ub_suc_bv>(1000000); }
 
-TEST(BBV0, Select0_10) { select0_test<b_suc_bv0>(10); }
+TEST(BBV0, Select0_10) { select0_test<ub_suc_bv>(10); }
 
-TEST(BBV0, Select0_100) { select0_test<b_suc_bv0>(100); }
+TEST(BBV0, Select0_100) { select0_test<ub_suc_bv>(100); }
 
-TEST(BBV0, Select0_1000) { select0_test<b_suc_bv0>(1000); }
+TEST(BBV0, Select0_1000) { select0_test<ub_suc_bv>(1000); }
 
-TEST(BBV0, Select0_10000) { select0_test<b_suc_bv0>(10000); }
+TEST(BBV0, Select0_10000) { select0_test<ub_suc_bv>(10000); }
 
-TEST(BBV0, Select0_100000) { select0_test<b_suc_bv0>(100000); }
+TEST(BBV0, Select0_100000) { select0_test<ub_suc_bv>(100000); }
 
-TEST(BBV0, Select0_1000000) { select0_test<b_suc_bv0>(1000000); }
+TEST(BBV0, Select0_1000000) { select0_test<ub_suc_bv>(1000000); }
 
