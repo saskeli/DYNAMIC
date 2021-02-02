@@ -31,6 +31,9 @@ exact_bench
 wm_string
 Testing/
 deb
+demo
+demo.cpp
+avx_comp
 time/t*
 time/CMakeLists.txt
 

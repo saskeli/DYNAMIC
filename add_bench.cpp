@@ -127,15 +127,15 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
     using std::chrono::high_resolution_clock;
     using std::chrono::microseconds;
 
-    double startexp = log2(double(100.0));
-    double delta = (log2(double(size)) - log2(100.0)) / steps;
+    double startexp = log2(double(10000.0));
+    double delta = (log2(double(size)) - log2(10000.0)) / steps;
     uint64_t ops = 100000;
     std::cout << "startexp: " << startexp << ". delta: " << delta << std::endl;
 
     std::cout << "Size\tremove\tinsert\taccess\trank\tselect\tchecksum"
               << std::endl;
 
-    for (uint64_t i = 0; i < 100; i++) {
+    for (uint64_t i = 0; i < 10000; i++) {
         bv.insert(gen() % (i + 1), gen() % 2);
     }
 
@@ -216,8 +216,8 @@ int main(int argc, char** argv) {
     } else if (argc == 4) {
         uint64_t n = atoi(argv[2]);
         uint64_t s = atof(argv[3]);
-        if (n <= 100) {
-            std::cout << "size should be significantly over 100" << std::endl;
+        if (n <= 10000) {
+            std::cout << "size should be significantly over 10000" << std::endl;
             return 1;
         }
         std::cout << "size = " << n << ". steps = " << s << std::endl;
