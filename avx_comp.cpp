@@ -60,7 +60,7 @@ void run_test() {
 
     auto t1 = high_resolution_clock::now();
     for (size_t i = 0; i < n; i++) {
-        checksum += bv.rank(v);
+        checksum += bv.rank(proc[i]);
     }
     auto t2 = high_resolution_clock::now();
     std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / n
