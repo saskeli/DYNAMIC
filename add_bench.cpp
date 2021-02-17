@@ -123,22 +123,29 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
     dyn_bv_t bv;
 
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<unsigned long long> gen(
+        std::numeric_limits<std::uint64_t>::min(),
+        std::numeric_limits<std::uint64_t>::max()
+    );
 
     using std::chrono::duration_cast;
     using std::chrono::high_resolution_clock;
     using std::chrono::microseconds;
 
-    double startexp = log2(double(1000000.0));
-    double delta = (log2(double(size)) - log2(1000000.0)) / steps;
-    uint64_t ops = 100000;
-    std::cout << "startexp: " << startexp << ". delta: " << delta << std::endl;
+    uint64_t start_size = 1000000;
 
-    std::cout << "Size\tremove\tinsert\taccess\trank\tselect\tchecksum"
+    double startexp = log2(double(start_size));
+    double delta = (log2(double(size)) - log2(double(start_size))) / steps;
+    uint64_t ops = 100000;
+    std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
+    std::vector<uint64_t> loc, val;
+
+    std::cout << "Size\tremove\tinsert\taccess\trank\tselect\tsize(bits)\tchecksum"
               << std::endl;
 
-    for (uint64_t i = 0; i < 100; i++) {
-        bv.insert(gen() % (i + 1), gen() % 2);
+    for (uint64_t i = 0; i < 900000; i++) {
+        bv.insert(gen(mt) % (i + 1), gen(mt) % 2);
     }
 
     for (uint64_t step = 1; step <= steps; step++) {
@@ -149,59 +156,80 @@ void benchmark_bv_ops(uint64_t size, uint64_t steps) {
 
         std::cout << target << "\t";
 
+        for (size_t i = start; i < target; i++) {
+            bv.insert(gen(mt) % (i + 1), gen(mt) % 2);
+        }
+
+        loc.clear();
+        for (uint64_t i = target; i > target - ops; i--) {
+            loc.push_back(gen(mt) % i);
+        }
+
         auto t1 = high_resolution_clock::now();
-        for (uint64_t i = start; i < target; i++) {
-            bv.insert(gen() % (i + 1), gen() % 2);
+        for (size_t i = 0; i < ops; i++) {
+            bv.remove(loc[i]);
         }
         auto t2 = high_resolution_clock::now();
-        double insert_time =
-            (double)duration_cast<microseconds>(t2 - t1).count() /
-            (target - start);
-
-        t1 = high_resolution_clock::now();
-        for (uint64_t i = target; i > start; i--) {
-            bv.remove(gen() % (i));
-        }
-        t2 = high_resolution_clock::now();
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() /
-                         (target - start)
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
-        t1 = high_resolution_clock::now();
-        for (uint64_t i = start; i < target; i++) {
-            bv.insert(gen() % (i + 1), gen() % 2);
+        loc.clear();
+        val.clear();
+        for (uint64_t i = bv.size(); i < target; i++) {
+            loc.push_back(gen(mt) % (i + 1));
+            val.push_back(gen(mt) % 2);
         }
-        t2 = high_resolution_clock::now();
-        insert_time = (insert_time +
-                       (double)duration_cast<microseconds>(t2 - t1).count() /
-                           (target - start)) /
-                      2;
-        std::cout << insert_time << "\t";
 
         t1 = high_resolution_clock::now();
-        for (uint64_t i = 0; i < ops; i++) {
-            checksum += bv.at(gen() % target);
+        for (size_t i = 0; i < ops; i++) {
+            bv.insert(loc[i], val[i]);
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % target);
+        }
+
         t1 = high_resolution_clock::now();
-        for (uint64_t i = 0; i < ops; i++) {
-            checksum += bv.rank(gen() % target);
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.at(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % target);
+        }
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.rank(loc[i]);
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
         uint64_t limit = bv.rank(target - 1);
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % limit);
+        }
+
         t1 = high_resolution_clock::now();
-        for (uint64_t i = 0; i < ops; i++) {
-            checksum += bv.select(gen() % limit);
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.select(loc[i]);
         }
         t2 = high_resolution_clock::now();
+
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
+
+        std::cout << bv.bit_size() << "\t";
 
         std::cout << checksum << std::endl;
     }
@@ -213,7 +241,7 @@ int main(int argc, char** argv) {
     if (argc == 3) {
         std::sscanf(argv[1], "%lu", &n);
         std::sscanf(argv[2], "%lu", &s);
-        std::cout << "Comparing operation speeds with different modification "
+        std::cerr << "Comparing operation speeds with different modification "
                      "probabilities for " << n << " element vector in "
                   << s << " steps " << std::endl;
         benchmark_bv_mix(n, s);
@@ -221,22 +249,22 @@ int main(int argc, char** argv) {
         std::sscanf(argv[2], "%lu", &n);
         std::sscanf(argv[3], "%lu", &s);
         if (n < 1000000) {
-            std::cout << "size should be greater than or equal to 1000000"
+            std::cerr << "size should be greater than or equal to 1000000"
                       << std::endl;
             return 1;
         }
         if (string(argv[1]).compare("-s") == 0) {
-            std::cout << "Benchmarking succinct bitvector operations up to "
+            std::cerr << "Benchmarking succinct bitvector operations up to "
                       << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::suc_bv>(n, s);
 
         } else if (string(argv[1]).compare("-b") == 0) {
-            std::cout
+            std::cerr
                 << "Benchmarking buffered succinct bitvector operations up to "
                 << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::b_suc_bv>(n, s);
         } else if (string(argv[1]).compare("-u") == 0) {
-            std::cout << "Benchmarking unbuffered buffered succinct bitvector "
+            std::cerr << "Benchmarking unbuffered buffered succinct bitvector "
                          "operations up to "
                       << n << " elements in " << s << " steps" << std::endl;
             benchmark_bv_ops<dyn::ub_suc_bv>(n, s);
